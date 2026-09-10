@@ -1,0 +1,131 @@
+name: Build & Release APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create a GitHub Release?'
+        required: false
+        type: boolean
+        default: true
+      release_version:
+        description: 'Version tag (e.g. v1.0.0)'
+        required: false
+        type: string
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Environment Files
+        run: |
+          if [ ! -f .env ]; then
+            if [ -f .env.example ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+      - name: Build Debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Package APK for Distribution
+        run: |
+          mkdir -p release-artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/ReelTracker.apk
+          cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/ReelTracker-debug.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReelTracker-APK
+          path: release-artifacts/ReelTracker.apk
+          retention-days: 90
+
+      - name: Create GitHub Release (Tagged Push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/ReelTracker.apk
+          name: "Reel Tracker Release ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## 📱 Reel Tracker - Official Android Release
+            
+            Download the standalone APK below and install it directly on your Android phone.
+
+            ### 📥 Direct Download
+            - **[ReelTracker.apk](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/ReelTracker.apk)**
+
+            ---
+
+            ### 📲 Installation Guide
+            1. Tap **`ReelTracker.apk`** to download it to your Android device.
+            2. Open your phone's notification bar or **Files / Downloads** app, and tap the APK to install.
+            3. If prompted by your browser or Android OS, tap **Settings** and toggle **Allow from this source** (or "Install unknown apps").
+            4. Open **Reel Tracker** and tap **Enable Auto-Tracking** to activate the Accessibility Service.
+            5. **Android 13+ Users**: If Android displays *"Restricted setting"*:
+               - Open your phone's **Settings > Apps > Reel Tracker**.
+               - Tap the **⋮** (three vertical dots) in the top-right corner.
+               - Select **Allow restricted settings** and confirm with your device PIN or fingerprint.
+               - Return to Reel Tracker and enable the tracking service.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release (Manual Workflow Dispatch)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/ReelTracker.apk
+          name: "Reel Tracker Release ${{ github.event.inputs.release_version }}"
+          tag_name: ${{ github.event.inputs.release_version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## 📱 Reel Tracker - Android Release
+            
+            Download the standalone APK below and install it directly on your Android phone.
+
+            ### 📥 Direct Download
+            - **[ReelTracker.apk](https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.release_version }}/ReelTracker.apk)**
+
+            ---
+
+            ### 📲 Quick Installation Steps
+            1. Download **`ReelTracker.apk`** to your phone.
+            2. Tap to install and allow "Install unknown apps" if requested.
+            3. Open Reel Tracker and turn on Accessibility tracking.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

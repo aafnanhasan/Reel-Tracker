@@ -1,0 +1,8 @@
+{
+  "name": "Remix Reel Tracker",
+  "description": "Counts everyday reels across Instagram, YouTube Shorts, and TikTok with daily history records and lifetime totals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

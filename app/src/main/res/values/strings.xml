@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Reel Tracker</string>
+    <string name="accessibility_service_description">Silently counts vertical reels, shorts, and TikTok videos scrolled on your device to keep your daily reels count and statistics accurate without manual entry.</string>
+</resources>
